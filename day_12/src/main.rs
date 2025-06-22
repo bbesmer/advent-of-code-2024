@@ -1,12 +1,21 @@
+use std::time::Instant;
 fn main() {
-    let garden = "AAAA
-BBCD
-BBCC
-EEEC
+    let garden = "OOOOO
+OXOXO
+OOOOO
+OXOXO
+OOOOO
 ";
-    let (width, height, garden) = garden_from_string(garden.to_owned());
-    let price = calculate_fence_price(width, height, &garden);
-    println!("Price={}", price)
+    let iterations = 100_000;
+    let start = Instant::now();
+    let mut price = 0;
+    for _ in 0..iterations {
+        let (width, height, garden) = garden_from_string(garden.to_owned());
+        price = calculate_total_fence_price(width, height, &garden);
+    }
+    let duration = start.elapsed();
+    println!("Time per iteration: {:?}", duration / iterations);
+    println!("Price={}", price);
 }
 
 fn garden_from_string(garden: String) -> (usize, usize, Vec<char>) {
@@ -24,30 +33,85 @@ fn garden_from_string(garden: String) -> (usize, usize, Vec<char>) {
     return (length / height, height, resutl);
 }
 
-fn calculate_fence_price(width: usize, height: usize, garden: &Vec<char>) -> u32 {
-    let mut visited: Vec<u8> = vec![0; width * height];
-    let total_price = 0;
-    // print_matrix(width, garden);
-    print_matrix(width, &visited);
+fn calculate_total_fence_price(width: usize, height: usize, garden: &Vec<char>) -> u32 {
+    let mut visited: Vec<bool> = vec![false; width * height];
+    let mut total_price = 0;
+    // print_matrix(width, &garden);
     while let Some(index) = get_non_visited_plot(&visited) {
-        let letter = garden[index];
-        let mut fencesForRegion: Vec<u8> = vec![0; width * height];
-        visited[index] = 1; // TODO calculate price for region
+        let regional_price =
+            calculate_regional_fence_price(width, height, garden, &mut visited, index);
+        total_price += regional_price;
     }
-    print_matrix(width, &visited);
     return total_price;
 }
 
-fn get_non_visited_plot(visited: &Vec<u8>) -> Option<usize> {
+fn get_non_visited_plot(visited: &Vec<bool>) -> Option<usize> {
     for (i, x) in visited.iter().enumerate() {
-        if *x == 0 {
+        if !*x {
             return Some(i);
         }
     }
     return None;
 }
 
-fn print_matrix<T>(width: usize, vector: &Vec<T>)
+fn calculate_regional_fence_price(
+    width: usize,
+    height: usize,
+    garden: &Vec<char>,
+    visited: &mut Vec<bool>,
+    index: usize,
+) -> u32 {
+    let letter = garden[index];
+    visited[index] = true;
+    let mut queue = vec![index];
+
+    let mut area = 0;
+    let mut fences = 0;
+    while let Some(index) = queue.pop() {
+        let mut neighbors: Vec<usize> = vec![];
+        area += 1;
+        // left
+        if index % width == 0 {
+            fences += 1;
+        } else {
+            neighbors.push(index - 1);
+        }
+
+        // right
+        if index % width == width - 1 {
+            fences += 1;
+        } else {
+            neighbors.push(index + 1);
+        }
+
+        // top
+        if index / width == 0 {
+            fences += 1;
+        } else {
+            neighbors.push(index - width);
+        }
+
+        //bottom
+        if index / width == height - 1 {
+            fences += 1;
+        } else {
+            neighbors.push(index + width);
+        }
+
+        for neighbor in neighbors {
+            if garden[neighbor] != letter {
+                fences += 1;
+            } else if !visited[neighbor] {
+                visited[neighbor] = true;
+                queue.push(neighbor)
+            }
+        }
+    }
+    // println!("Region {}: Area={}, Fences={}", letter, area, fences);
+    return area * fences;
+}
+
+fn _print_matrix<T>(width: usize, vector: &Vec<T>)
 where
     T: std::fmt::Display,
 {
@@ -57,6 +121,5 @@ where
         }
         print!("{}", x);
     }
-    print!("\n");
     print!("\n");
 }
