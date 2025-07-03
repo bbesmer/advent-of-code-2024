@@ -1,12 +1,25 @@
-use std::time::Instant;
+use std::{fs::File, io::Read, path::Path, time::Instant};
+
 fn main() {
-    let garden = "OOOOO
-OXOXO
-OOOOO
-OXOXO
-OOOOO
-";
-    let iterations = 100_000;
+    let path = Path::new("./input.txt");
+    let display = path.display();
+
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("couldn't open {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    let mut garden = String::new();
+    if let Err(why) = file.read_to_string(&mut garden) {
+        panic!("couldn't read {}: {}", path.display(), why);
+    }
+//     let garden = "OOOOO
+// OXOXO
+// OOOOO
+// OXOXO
+// OOOOO
+// ";
+    let iterations = 1;
     let start = Instant::now();
     let mut price = 0;
     for _ in 0..iterations {
@@ -16,6 +29,7 @@ OOOOO
     let duration = start.elapsed();
     println!("Time per iteration: {:?}", duration / iterations);
     println!("Price={}", price);
+    assert_eq!(1370258, price);
 }
 
 fn garden_from_string(garden: String) -> (usize, usize, Vec<char>) {
