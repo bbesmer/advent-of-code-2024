@@ -45,11 +45,12 @@ impl Garden {
     }
 }
 
+#[derive(Debug)]
 pub struct Plot<'a> {
     garden: &'a Garden,
     pub(crate) x: usize,
     pub(crate) y: usize,
-    pub(crate) letter: char,
+    letter: char,
 }
 
 impl<'a> Plot<'a> {

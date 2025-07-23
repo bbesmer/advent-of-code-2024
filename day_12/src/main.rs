@@ -34,11 +34,15 @@ fn main() {
     let duration = start.elapsed();
     println!("Time per iteration: {:?}", duration / iterations);
     println!("Price={}", price);
-    assert_eq!(1370258, price);
+    if discounted {
+        assert_eq!(805814, price);
+    } else {
+        assert_eq!(1370258, price);
+    }
 }
 
 fn calculate_total_fence_price(garden: &Garden, discounted: bool) -> u32 {
-    let mut visited: Vec<bool> = vec![false; garden.width * garden.height];
+    let mut visited = vec![false; garden.width * garden.height];
     let mut total_price = 0;
     while let Some(plot) = get_non_visited_plot(&visited, &garden) {
         let regional_price =
@@ -108,8 +112,9 @@ fn calculate_regional_fence_price(
         let fence_conditions = [!extends_top, !extends_right, !extends_left, !extends_bottom];
         // println!("{:?}", fence_conditions);
         fences += fence_conditions
-            .iter()
-            .fold(0, |acc, &b| if b { acc + 1 } else { acc });
+            .into_iter()
+            .filter(|&x| x)
+            .count();
 
         let outer_edge_conditions = [
             !extends_bottom & !extends_left,
@@ -118,8 +123,8 @@ fn calculate_regional_fence_price(
             !extends_right & !extends_bottom
         ];
         outer_edges += outer_edge_conditions
-            .iter()
-            .fold(0, |acc, &b| if b { acc + 1 } else { acc });
+            .into_iter()
+            .fold(0, |acc, b| if b { acc + 1 } else { acc });
         
         let extends_top_left = plot.extends_top_left();
         let extends_bottom_left = plot.extends_bottom_left();
