@@ -14,71 +14,27 @@ fn main() {
 
     let total_price: i64 = machines
         .into_iter()
+        .map(fix_unit_conversion_error) // i.e. part 2
         .map(calculate_price)
-        .fold(0i64, |acc, x| acc + x.unwrap_or(0)); // Wie summiert man i32 richtig auf?
+        .fold(0i64, |acc, x| acc + x.unwrap_or(0)); // Wie summiert man integers richtig auf?
+
     println!("Solution: {}", total_price);
+}
 
-    let orthogonal_machine = ClawMachine {
-        x_a: 1,
-        y_a: 0,
-        x_b: 0,
-        y_b: 1,
-        x_p: 3,
-        y_p: 5,
-    };
-    let overshoot_machine = ClawMachine {
-        x_a: 2,
-        y_a: 0,
-        x_b: 0,
-        y_b: 2,
-        x_p: 3,
-        y_p: 5,
-    };
-    let negative_machine = ClawMachine {
-        x_a: 1,
-        y_a: 1,
-        x_b: 0,
-        y_b: 1,
-        x_p: 3,
-        y_p: 0,
-    };
-    // let parallel_winning_machine = ClawMachine {
-    //     x_a: 1,
-    //     y_a: 2,
-    //     x_b: 1,
-    //     y_b: 2,
-    //     x_p: 2,
-    //     y_p: 4,
-    // };
-    // let parallel_overshoot_machine = ClawMachine {
-    //     x_a: 2,
-    //     y_a: 2,
-    //     x_b: 2,
-    //     y_b: 2,
-    //     x_p: 3,
-    //     y_p: 3,
-    // };
-    // let parallel_missing_machine = ClawMachine {
-    //     x_a: 1,
-    //     y_a: 2,
-    //     x_b: 1,
-    //     y_b: 2,
-    //     x_p: 1,
-    //     y_p: 4,
-    // };
+#[derive(Debug)]
+struct ClawMachine {
+    x_a: i64,
+    y_a: i64,
+    x_b: i64,
+    y_b: i64,
+    x_p: i64,
+    y_p: i64,
+}
 
-    let machines = [
-        orthogonal_machine,
-        overshoot_machine,
-        negative_machine,
-        // parallel_winning_machine,
-        // parallel_overshoot_machine,
-        // parallel_missing_machine,
-    ];
-
-    for machine in machines {
-        solve(machine);
-    }
+#[derive(Debug, PartialEq)]
+struct Solution {
+    number_of_presses_a: i64,
+    number_of_presses_b: i64,
 }
 
 fn load_from_file(path: &Path) -> Vec<ClawMachine> {
@@ -110,8 +66,8 @@ fn process_block(lines: &[String], result: &mut Vec<ClawMachine>) {
     );
 }
 
-fn parse_lines(lines: &[String]) -> Option<ClawMachine> { // There would be more information if it returned Result ...
-    // TODO add some tests
+// There would be more information if it returned Result ...
+fn parse_lines(lines: &[String]) -> Option<ClawMachine> {
     if lines.len() != 3 {
         return None;
     }
@@ -122,32 +78,26 @@ fn parse_lines(lines: &[String]) -> Option<ClawMachine> { // There would be more
     let capture_b = re_button.captures(&lines[1])?;
     let capture_p = re_price.captures(&lines[2])?;
 
-    // let offset: i64 = 0;
-    let offset: i64 = 10_000_000_000_000; // warum wird i32 vorgschlagen
     Some(ClawMachine {
         x_a: capture_a[1].parse().ok()?,
         y_a: capture_a[2].parse().ok()?,
         x_b: capture_b[1].parse().ok()?,
         y_b: capture_b[2].parse().ok()?,
-        x_p: capture_p[1].parse::<i64>().ok()? + offset,
-        y_p: capture_p[2].parse::<i64>().ok()? + offset,
+        x_p: capture_p[1].parse().ok()?,
+        y_p: capture_p[2].parse().ok()?,
     })
 }
 
-#[derive(Debug)]
-struct ClawMachine {
-    x_a: i64,
-    y_a: i64,
-    x_b: i64,
-    y_b: i64,
-    x_p: i64,
-    y_p: i64,
-}
-
-#[derive(Debug)]
-struct Solution {
-    number_of_presses_a: i64,
-    number_of_presses_b: i64,
+fn fix_unit_conversion_error(machine: ClawMachine) -> ClawMachine {
+    let offset: i64 = 10_000_000_000_000;
+    ClawMachine {
+        x_a: machine.x_a,
+        y_a: machine.y_a,
+        x_b: machine.x_b,
+        y_b: machine.y_b,
+        x_p: machine.x_p + offset,
+        y_p: machine.y_p + offset,
+    } // ug
 }
 
 fn calculate_price(machine: ClawMachine) -> Option<i64> {
@@ -159,32 +109,144 @@ fn calculate_price(machine: ClawMachine) -> Option<i64> {
 
 // This solves:
 // /x_a  x_b\   /number_of_presses_a\   /x_p\
-//|          |°|                     |=|     | 
+//|          |°|                     |=|     |
 // \y_a  y_b/   \number_of_presses_b/   \y_p/
 fn solve(machine: ClawMachine) -> Option<Solution> {
     let determinant = machine.x_a * machine.y_b - machine.x_b * machine.y_a;
     if determinant == 0 {
         println!("{:?} d={}", machine, determinant);
         panic!(
-            "This case could lead to a possible solution (two parallel buttons), however not yet handled"
+            "This case could lead to a possible solution (two parallel buttons), however not yet handled" // TODO implement
         )
     } else {
         let dividend_n = machine.y_b * machine.x_p - machine.x_b * machine.y_p;
         let dividend_m = machine.x_a * machine.y_p - machine.y_a * machine.x_p;
+        // number of presses have to be integer
         if dividend_n % determinant != 0 || dividend_n % determinant != 0 {
-            // number of presses have to be integer
             return None;
         }
+
         let n = dividend_n / determinant;
         let m = dividend_m / determinant;
+        // number of presses have to be positive
         if n < 0 || m < 0 {
-            // number of presses have to be positive
             return None;
         }
-        println!("{:?} d={}, n={}, m={}", machine, determinant, n, m);
+
+        // println!("{:?} d={}, n={}, m={}", machine, determinant, n, m);
         return Some(Solution {
             number_of_presses_a: n,
             number_of_presses_b: m,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_lines() {
+        let sample_lines = vec![
+            String::from("Button A: X+1, Y+2"),
+            String::from("Button B: X+3, Y+4"),
+            String::from("Prize: X=5, Y=6"),
+        ];
+
+        let machine = parse_lines(&sample_lines).expect("Parsing failed");
+        assert_eq!(machine.x_a, 1);
+        assert_eq!(machine.y_a, 2);
+        assert_eq!(machine.x_b, 3);
+        assert_eq!(machine.y_b, 4);
+        assert_eq!(machine.x_p, 5);
+        assert_eq!(machine.y_p, 6);
+    }
+
+    #[test]
+    fn test_orthogonal_machine() {
+        let machine = ClawMachine {
+            x_a: 1,
+            y_a: 0,
+            x_b: 0,
+            y_b: 1,
+            x_p: 3,
+            y_p: 5,
+        };
+        let result = solve(machine);
+        assert_eq!(
+            result,
+            Some(Solution {
+                number_of_presses_a: 3,
+                number_of_presses_b: 5,
+            })
+        );
+    }
+
+    #[test]
+    fn test_overshoot_machine() {
+        let machine = ClawMachine {
+            x_a: 2,
+            y_a: 0,
+            x_b: 0,
+            y_b: 2,
+            x_p: 3,
+            y_p: 5,
+        };
+        assert_eq!(solve(machine), None);
+    }
+
+    #[test]
+    fn test_negative_machine() {
+        let machine = ClawMachine {
+            x_a: 1,
+            y_a: 1,
+            x_b: 0,
+            y_b: 1,
+            x_p: 3,
+            y_p: 0,
+        };
+        assert_eq!(solve(machine), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "This case could lead to a possible solution")]
+    fn test_parallel_winning_machine() {
+        let machine = ClawMachine {
+            x_a: 1,
+            y_a: 2,
+            x_b: 1,
+            y_b: 2,
+            x_p: 2,
+            y_p: 4,
+        };
+        solve(machine);
+    }
+
+    #[test]
+    #[should_panic(expected = "This case could lead to a possible solution")]
+    fn test_parallel_overshoot_machine() {
+        let machine = ClawMachine {
+            x_a: 2,
+            y_a: 2,
+            x_b: 2,
+            y_b: 2,
+            x_p: 3,
+            y_p: 3,
+        };
+        solve(machine);
+    }
+
+    #[test]
+    #[should_panic(expected = "This case could lead to a possible solution")]
+    fn test_parallel_missing_machine() {
+        let machine = ClawMachine {
+            x_a: 1,
+            y_a: 2,
+            x_b: 1,
+            y_b: 2,
+            x_p: 1,
+            y_p: 4,
+        };
+        solve(machine);
     }
 }
