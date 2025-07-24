@@ -1,4 +1,15 @@
+use std::{fs::File, io::{BufRead, BufReader}, path::Path};
+
+use regex::Regex;
+
 fn main() {
+    let path = Path::new("./input.txt");
+    let machines = load_from_file(&path);
+    println!("{}", machines.len());
+    for machine in machines {
+        solve(machine);
+    }
+
     let orthogonal_machine = ClawMachine{ x_a: 1, y_a: 0, x_b: 0, y_b: 1, x_p: 3, y_p: 5 };
     let overshoot_machine = ClawMachine{ x_a: 2, y_a: 0, x_b: 0, y_b: 2, x_p: 3, y_p: 5 };
     let negative_machine = ClawMachine{ x_a: 1, y_a: 1, x_b: 0, y_b: 1, x_p: 3, y_p: 0 };
@@ -18,6 +29,55 @@ fn main() {
     for machine in machines {
         solve(machine);
     }
+}
+
+fn load_from_file(path: &Path) -> Vec<ClawMachine> {
+    let file = match File::open(&path) {
+        Err(why) => panic!("couldn't open {}: {}", path.display(), why),
+        Ok(file) => file,
+    };
+    let reader = BufReader::new(file);
+    
+    let mut result = vec![];
+    let mut block = vec![];
+    for line in reader.lines().map_while(Result::ok) {
+        if line.trim().is_empty() {
+            process_block(&block, &mut result);
+            block.clear();           
+        }
+        else {
+            block.push(line);
+        }
+    }
+    if !block.is_empty() {
+        process_block(&block, &mut result);
+    }
+    return result;
+}
+
+fn process_block(lines: &[String], result: &mut Vec<ClawMachine>) { // TODOs Error handlin in seperat method && some test...
+    if lines.len() != 3 {
+        panic!("error while reading the file, no complete machine");
+    }
+    let re_button = Regex::new(r"X\+(\d+), Y\+(\d+)").expect("Static regex is static.");
+    let re_price = Regex::new(r"X\=(\d+), Y\=(\d+)").expect("Static regex is static.");
+
+    let capture_a = re_button.captures(&lines[0]).expect("TODO handle");
+    let capture_b = re_button.captures(&lines[1]).expect("TODO handle");
+    let capture_p = re_price.captures(&lines[2]).expect("TODO handle");
+
+
+    let a: i32 = capture_a[1].parse().expect("TODO handle");
+    let machine = ClawMachine {
+        x_a: capture_a[1].parse().expect("TODO handle"),
+        y_a: capture_a[2].parse().expect("TODO handle"),
+        x_b: capture_b[1].parse().expect("TODO handle"),
+        y_b: capture_b[2].parse().expect("TODO handle"),
+        x_p: capture_p[1].parse().expect("TODO handle"),
+        y_p: capture_p[2].parse().expect("TODO handle")
+    };
+    // println!("{:?}", machine);
+    result.push(machine);
 }
 
 #[derive(Debug)]
