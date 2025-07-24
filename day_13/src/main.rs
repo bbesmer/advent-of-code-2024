@@ -15,8 +15,9 @@ fn main() {
     let total_price: i64 = machines
         .into_iter()
         .map(fix_unit_conversion_error) // i.e. part 2
-        .map(calculate_price)
-        .fold(0i64, |acc, x| acc + x.unwrap_or(0)); // Wie summiert man integers richtig auf?
+        .filter_map(solve)
+        .map(calculate_tokens)
+        .sum();
 
     println!("Solution: {}", total_price);
 }
@@ -33,8 +34,8 @@ struct ClawMachine {
 
 #[derive(Debug, PartialEq)]
 struct Solution {
-    number_of_presses_a: i64,
-    number_of_presses_b: i64,
+    presses_on_a: i64,
+    presses_on_b: i64,
 }
 
 fn load_from_file(path: &Path) -> Vec<ClawMachine> {
@@ -90,27 +91,23 @@ fn parse_lines(lines: &[String]) -> Option<ClawMachine> {
 
 fn fix_unit_conversion_error(machine: ClawMachine) -> ClawMachine {
     let offset: i64 = 10_000_000_000_000;
-    ClawMachine {
-        x_a: machine.x_a,
-        y_a: machine.y_a,
-        x_b: machine.x_b,
-        y_b: machine.y_b,
-        x_p: machine.x_p + offset,
-        y_p: machine.y_p + offset,
-    } // ug
+    let mut machine = machine;
+    machine.x_p += offset;
+    machine.y_p += offset;
+    machine
 }
 
-fn calculate_price(machine: ClawMachine) -> Option<i64> {
+fn calculate_tokens(solution: Solution) -> i64 {
     let price_button_a = 3;
     let price_button_b = 1;
-    solve(machine)
-        .map(|s| s.number_of_presses_a * price_button_a + s.number_of_presses_b * price_button_b)
+
+    solution.presses_on_a * price_button_a + solution.presses_on_b * price_button_b
 }
 
 // This solves:
-// /x_a  x_b\   /number_of_presses_a\   /x_p\
-//|          |°|                     |=|     |
-// \y_a  y_b/   \number_of_presses_b/   \y_p/
+// /x_a  x_b\   /presses_on_a\   /x_p\
+//|          |*|              |=|     |
+// \y_a  y_b/   \presses_on_b/   \y_p/
 fn solve(machine: ClawMachine) -> Option<Solution> {
     let determinant = machine.x_a * machine.y_b - machine.x_b * machine.y_a;
     if determinant == 0 {
@@ -122,7 +119,7 @@ fn solve(machine: ClawMachine) -> Option<Solution> {
         let dividend_n = machine.y_b * machine.x_p - machine.x_b * machine.y_p;
         let dividend_m = machine.x_a * machine.y_p - machine.y_a * machine.x_p;
         // number of presses have to be integer
-        if dividend_n % determinant != 0 || dividend_n % determinant != 0 {
+        if dividend_n % determinant != 0 || dividend_m % determinant != 0 {
             return None;
         }
 
@@ -135,8 +132,8 @@ fn solve(machine: ClawMachine) -> Option<Solution> {
 
         // println!("{:?} d={}, n={}, m={}", machine, determinant, n, m);
         return Some(Solution {
-            number_of_presses_a: n,
-            number_of_presses_b: m,
+            presses_on_a: n,
+            presses_on_b: m,
         });
     }
 }
@@ -176,8 +173,8 @@ mod tests {
         assert_eq!(
             result,
             Some(Solution {
-                number_of_presses_a: 3,
-                number_of_presses_b: 5,
+                presses_on_a: 3,
+                presses_on_b: 5,
             })
         );
     }
